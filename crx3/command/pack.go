@@ -1,8 +1,10 @@
 package command
 
 import (
-	"crypto/ecdsa"
+	"crypto/ed25519"
+	"encoding/base32"
 	"errors"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	crx3 "github.com/tio-dev/go-crx3"
@@ -30,12 +32,14 @@ func newPackCmd() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			unpacked := args[0]
-			var pk *ecdsa.PrivateKey
+			var pk ed25519.PrivateKey
 			if opts.HasPem() {
 				pk, err = crx3.LoadPrivateKey(opts.PrivateKey)
 				if err != nil {
 					return err
 				}
+				pub := pk.Public()
+				fmt.Printf("USING PK: %s\n", base32.StdEncoding.EncodeToString([]byte(pub.(ed25519.PublicKey))))
 			}
 			return crx3.Pack(unpacked, opts.Outfile, pk)
 		},

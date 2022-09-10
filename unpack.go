@@ -1,9 +1,10 @@
 package crx3
 
 import (
+	"bufio"
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/sha256"
+	"crypto/ed25519"
+	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base32"
 	"encoding/binary"
@@ -21,7 +22,7 @@ import (
 )
 
 // Unpack unpacks chrome extension into some directory.
-func Unpack(filename string, out *string, pem *string) error {
+func Unpack(filename string, out *string, key *string, isPEM bool) error {
 	outPath := ""
 	if out != nil {
 		outInfo, err := os.Stat(*out)
@@ -67,13 +68,26 @@ func Unpack(filename string, out *string, pem *string) error {
 
 	unpacked := strings.TrimRight(filename, crxExt)
 
-	if pem != nil {
-		permittedPub, err := LoadPublicKey(*pem)
-		if err != nil {
-			return err
+	if key != nil {
+		var permittedPub ed25519.PublicKey
+		if isPEM {
+			permittedPub, err = LoadPublicKey(*key)
+			if err != nil {
+				return err
+			}
+			permittedPubWithSum := makeBase32PublicKeyWithSum(permittedPub)
+			permittedPub, err = base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(permittedPubWithSum)
+			if err != nil {
+				return err
+			}
+		} else {
+			permittedPub, err = base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(*key)
+			if err != nil {
+				return err
+			}
 		}
 
-		hashes := header.Sha256WithEcdsa
+		hashes := header.Sha256WithEd25519
 		for i := range hashes {
 			pubData := hashes[i].PublicKey
 			signature := hashes[i].Signature
@@ -81,17 +95,18 @@ func Unpack(filename string, out *string, pem *string) error {
 			if err != nil {
 				return err
 			}
-			pubData, err = x509.MarshalPKIXPublicKey(pub)
-			if err != nil {
-				return err
-			}
-			fmt.Printf("\nPUBLIC KEY base32: %s\n", base32.StdEncoding.EncodeToString(pubData))
 
-			if !permittedPub.Equal(pub.(*ecdsa.PublicKey)) {
+			pubKey := makeBase32PublicKeyWithSum(pub.(ed25519.PublicKey))
+			fmt.Printf("%d) PUBLIC KEY base32: %s\n", i, pubKey)
+
+			permittedPubKey := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(permittedPub)
+			fmt.Printf("%d) PERMITTED PUBLIC KEY base32: %s\n", i, permittedPubKey)
+
+			if pubKey != permittedPubKey {
 				return ErrPublicKeyNotPermitted
 			}
 
-			ok, err := verifySign(reader, signature, pub.(*ecdsa.PublicKey))
+			ok, err := verifySign(reader, signature, pub.(ed25519.PublicKey))
 			if err != nil {
 				return err
 			}
@@ -109,7 +124,7 @@ func Unpack(filename string, out *string, pem *string) error {
 	return Unzip(reader, size, unpacked)
 }
 
-func verifySign(r io.Reader, signature []byte, pub *ecdsa.PublicKey) (bool, error) {
+func verifySign(r io.Reader, signature []byte, pub ed25519.PublicKey) (bool, error) {
 	pubData, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
 		return false, err
@@ -119,14 +134,22 @@ func verifySign(r io.Reader, signature []byte, pub *ecdsa.PublicKey) (bool, erro
 		return false, err
 	}
 
-	sign := sha256.New()
-	sign.Write([]byte(CRX3_SIGNED_DATA))
-	if err := binary.Write(sign, binary.LittleEndian, uint32(len(signedData))); err != nil {
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+	w.Write([]byte(CRX3_SIGNED_DATA))
+	if err := binary.Write(w, binary.LittleEndian, uint32(len(signedData))); err != nil {
 		return false, err
 	}
-	sign.Write(signedData)
-	if _, err := io.Copy(sign, r); err != nil {
+	w.Write(signedData)
+	if _, err := io.Copy(w, r); err != nil {
 		return false, err
 	}
-	return ecdsa.VerifyASN1(pub, sign.Sum(nil), signature), nil
+	return ed25519.Verify(pub, buf.Bytes(), signature), nil
+}
+
+func makeBase32PublicKeyWithSum(pub ed25519.PublicKey) string {
+	fullSumHash := sha512.Sum512_256(pub) // 32 bytes
+	sumHash := fullSumHash[28:]           // 4 últimos de 32 -> posições 28, 29, 30 e 31
+	data := append(pub, sumHash...)
+	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(data)
 }

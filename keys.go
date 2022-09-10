@@ -1,9 +1,7 @@
 package crx3
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
+	"crypto/ed25519"
 	"crypto/x509"
 	"encoding/pem"
 	"io/ioutil"
@@ -11,12 +9,13 @@ import (
 )
 
 // NewPrivateKey returns a new private key.
-func NewPrivateKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+func NewPrivateKey() (ed25519.PrivateKey, error) {
+	_, priv, err := ed25519.GenerateKey(nil)
+	return priv, err
 }
 
 // SavePrivateKey saves private key to file.
-func SavePrivateKey(filename string, key *ecdsa.PrivateKey) error {
+func SavePrivateKey(filename string, key ed25519.PrivateKey) error {
 	if key == nil {
 		key, _ = NewPrivateKey()
 	}
@@ -25,7 +24,7 @@ func SavePrivateKey(filename string, key *ecdsa.PrivateKey) error {
 		return err
 	}
 	defer fd.Close()
-	bytes, err := x509.MarshalECPrivateKey(key)
+	bytes, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
 		return err
 	}
@@ -38,7 +37,7 @@ func SavePrivateKey(filename string, key *ecdsa.PrivateKey) error {
 }
 
 // LoadPrivateKey loads the private key from a file into memory.
-func LoadPrivateKey(filename string) (*ecdsa.PrivateKey, error) {
+func LoadPrivateKey(filename string) (ed25519.PrivateKey, error) {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -47,15 +46,15 @@ func LoadPrivateKey(filename string) (*ecdsa.PrivateKey, error) {
 	if block == nil {
 		return nil, ErrPrivateKeyNotFound
 	}
-	r, err := x509.ParseECPrivateKey(block.Bytes)
+	r, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
-	return r, nil
+	return r.(ed25519.PrivateKey), nil
 }
 
 // LoadPublicKey loads the public key from a file into memory.
-func LoadPublicKey(filename string) (*ecdsa.PublicKey, error) {
+func LoadPublicKey(filename string) (ed25519.PublicKey, error) {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -68,5 +67,5 @@ func LoadPublicKey(filename string) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return r.(*ecdsa.PublicKey), nil
+	return r.(ed25519.PublicKey), nil
 }

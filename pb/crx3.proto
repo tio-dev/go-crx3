@@ -28,7 +28,7 @@ message CrxFileHeader {
   // ECDSA signature, using the NIST P-256 curve. Public key appears in
   // named-curve format.
   // The pinned algorithm will be this, at least on 2017-01-01.
-  repeated AsymmetricKeyProof sha256_with_ecdsa = 3;
+  repeated AsymmetricKeyProof sha256_with_ed25519 = 3;
 
   // The binary form of a SignedData message. We do not use a nested
   // SignedData message, as handlers of this message must verify the proofs

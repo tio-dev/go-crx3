@@ -51,7 +51,7 @@ func newDownloadCmd() *cobra.Command {
 				return err
 			}
 			if opts.Unpack {
-				if err := crx3.Unpack(opts.Outfile, nil, nil); err != nil {
+				if err := crx3.Unpack(opts.Outfile, nil, nil, false); err != nil {
 					return err
 				}
 				if err := os.Remove(opts.Outfile); err != nil {

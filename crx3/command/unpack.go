@@ -8,15 +8,19 @@ import (
 )
 
 type unpackOpts struct {
+	PublicKeyPEM string
 	PublicKey    string
 	OutDirectory string
 }
 
 func (o unpackOpts) HasPem() bool {
-	return len(o.PublicKey) > 0
+	return len(o.PublicKeyPEM) > 0
 }
 func (o unpackOpts) HasOut() bool {
 	return len(o.OutDirectory) > 0
+}
+func (o unpackOpts) HasKey() bool {
+	return len(o.PublicKey) > 0
 }
 
 func newUnpackCmd() *cobra.Command {
@@ -36,15 +40,21 @@ func newUnpackCmd() *cobra.Command {
 			if opts.HasOut() {
 				out = &opts.OutDirectory
 			}
-			var pem *string
+			var isPEM bool
+			var key *string
 			if opts.HasPem() {
-				pem = &opts.PublicKey
+				key = &opts.PublicKeyPEM
+				isPEM = true
+			} else if opts.HasKey() {
+				key = &opts.PublicKey
+				isPEM = false
 			}
 
-			return crx3.Unpack(infile, out, pem)
+			return crx3.Unpack(infile, out, key, isPEM)
 		},
 	}
-	cmd.Flags().StringVarP(&opts.PublicKey, "pem", "p", "", "public key for signature verification")
+	cmd.Flags().StringVarP(&opts.PublicKey, "key", "k", "", "public key base32 for signature verification")
+	cmd.Flags().StringVarP(&opts.PublicKeyPEM, "pem", "p", "", "public key PEM file for signature verification")
 	cmd.Flags().StringVarP(&opts.OutDirectory, "out", "o", "", "unpack to specified directory")
 
 	return cmd

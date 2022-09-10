@@ -1,9 +1,9 @@
 package crx3
 
 import (
+	"bufio"
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/rand"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/binary"
@@ -24,7 +24,7 @@ const (
 )
 
 // Pack packs a zip file or unzipped directory into a crx extension.
-func Pack(src string, dst string, pk *ecdsa.PrivateKey) (err error) {
+func Pack(src string, dst string, pk ed25519.PrivateKey) (err error) {
 	var (
 		publicKey      []byte
 		signedData     []byte
@@ -56,6 +56,7 @@ func Pack(src string, dst string, pk *ecdsa.PrivateKey) (err error) {
 	if publicKey, err = makePublicKey(pk); err != nil {
 		return err
 	}
+
 	if signedData, err = makeSignedData(publicKey); err != nil {
 		return err
 	}
@@ -138,8 +139,8 @@ func makeCRXID(publicKey []byte) []byte {
 	return hash.Sum(nil)[0:16]
 }
 
-func makePublicKey(pk *ecdsa.PrivateKey) ([]byte, error) {
-	return x509.MarshalPKIXPublicKey(&pk.PublicKey)
+func makePublicKey(pk ed25519.PrivateKey) ([]byte, error) {
+	return x509.MarshalPKIXPublicKey(pk.Public())
 }
 
 func makeSignedData(publicKey []byte) ([]byte, error) {
@@ -149,22 +150,24 @@ func makeSignedData(publicKey []byte) ([]byte, error) {
 	return proto.Marshal(signedData)
 }
 
-func makeSign(r io.Reader, signedData []byte, pk *ecdsa.PrivateKey) ([]byte, error) {
-	sign := sha256.New()
-	sign.Write([]byte(CRX3_SIGNED_DATA))
-	if err := binary.Write(sign, binary.LittleEndian, uint32(len(signedData))); err != nil {
+func makeSign(r io.Reader, signedData []byte, pk ed25519.PrivateKey) ([]byte, error) {
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+	w.Write([]byte(CRX3_SIGNED_DATA))
+	if err := binary.Write(w, binary.LittleEndian, uint32(len(signedData))); err != nil {
 		return nil, err
 	}
-	sign.Write(signedData)
-	if _, err := io.Copy(sign, r); err != nil {
+	w.Write(signedData)
+	if _, err := io.Copy(w, r); err != nil {
 		return nil, err
 	}
-	return ecdsa.SignASN1(rand.Reader, pk, sign.Sum(nil))
+
+	return ed25519.Sign(pk, buf.Bytes()), nil
 }
 
 func makeHeader(pubKey, signature, signedData []byte) ([]byte, error) {
 	header := &pb.CrxFileHeader{
-		Sha256WithEcdsa: []*pb.AsymmetricKeyProof{
+		Sha256WithEd25519: []*pb.AsymmetricKeyProof{
 			{
 				PublicKey: pubKey,
 				Signature: signature,
@@ -175,7 +178,7 @@ func makeHeader(pubKey, signature, signedData []byte) ([]byte, error) {
 	return proto.Marshal(header)
 }
 
-func saveDefaultPrivateKey(filename string, pk *ecdsa.PrivateKey) error {
+func saveDefaultPrivateKey(filename string, pk ed25519.PrivateKey) error {
 	pemFilename := strings.TrimRight(filename, zipExt)
 	pemFilename = pemFilename + pemExt
 	return SavePrivateKey(pemFilename, pk)

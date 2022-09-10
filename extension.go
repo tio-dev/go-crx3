@@ -1,7 +1,7 @@
 package crx3
 
 import (
-	"crypto/ecdsa"
+	"crypto/ed25519"
 	"os"
 	"strconv"
 	"strings"
@@ -100,11 +100,11 @@ func (e Extension) Unpack() error {
 	if e.isEmpty() {
 		return ErrPathNotFound
 	}
-	return Unpack(e.String(), nil, nil)
+	return Unpack(e.String(), nil, nil, false)
 }
 
 // PackTo packs zip file or an unpacked directory into a CRX3 file.
-func (e Extension) PackTo(dst string, pk *ecdsa.PrivateKey) error {
+func (e Extension) PackTo(dst string, pk ed25519.PrivateKey) error {
 	if e.isEmpty() {
 		return ErrPathNotFound
 	}
@@ -112,7 +112,7 @@ func (e Extension) PackTo(dst string, pk *ecdsa.PrivateKey) error {
 }
 
 // Pack packs zip file or an unpacked directory into a CRX3 file.
-func (e Extension) Pack(pk *ecdsa.PrivateKey) error {
+func (e Extension) Pack(pk ed25519.PrivateKey) error {
 	if e.isEmpty() {
 		return ErrPathNotFound
 	}
