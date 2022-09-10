@@ -1,11 +1,11 @@
 package command
 
 import (
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"errors"
 
-	crx3 "github.com/mediabuyerbot/go-crx3"
 	"github.com/spf13/cobra"
+	crx3 "github.com/tio-dev/go-crx3"
 )
 
 type packOpts struct {
@@ -30,7 +30,7 @@ func newPackCmd() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			unpacked := args[0]
-			var pk *rsa.PrivateKey
+			var pk *ecdsa.PrivateKey
 			if opts.HasPem() {
 				pk, err = crx3.LoadPrivateKey(opts.PrivateKey)
 				if err != nil {

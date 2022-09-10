@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mediabuyerbot/go-crx3"
 	"github.com/spf13/cobra"
+	"github.com/tio-dev/go-crx3"
 )
 
 func newIDCmd() *cobra.Command {

@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	crx3 "github.com/mediabuyerbot/go-crx3"
 	"github.com/spf13/cobra"
+	crx3 "github.com/tio-dev/go-crx3"
 )
 
 type unzipOpts struct {

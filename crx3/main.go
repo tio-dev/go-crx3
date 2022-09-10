@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mediabuyerbot/go-crx3/crx3/command"
+	"github.com/tio-dev/go-crx3/crx3/command"
 )
 
 func main() {

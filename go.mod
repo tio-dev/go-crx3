@@ -1,4 +1,4 @@
-module github.com/mediabuyerbot/go-crx3
+module github.com/tio-dev/go-crx3
 
 go 1.17
 

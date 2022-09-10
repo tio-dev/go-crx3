@@ -1,7 +1,7 @@
 package crx3
 
 import (
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"os"
 	"strconv"
 	"strings"
@@ -100,11 +100,11 @@ func (e Extension) Unpack() error {
 	if e.isEmpty() {
 		return ErrPathNotFound
 	}
-	return Unpack(e.String())
+	return Unpack(e.String(), nil, nil)
 }
 
 // PackTo packs zip file or an unpacked directory into a CRX3 file.
-func (e Extension) PackTo(dst string, pk *rsa.PrivateKey) error {
+func (e Extension) PackTo(dst string, pk *ecdsa.PrivateKey) error {
 	if e.isEmpty() {
 		return ErrPathNotFound
 	}
@@ -112,7 +112,7 @@ func (e Extension) PackTo(dst string, pk *rsa.PrivateKey) error {
 }
 
 // Pack packs zip file or an unpacked directory into a CRX3 file.
-func (e Extension) Pack(pk *rsa.PrivateKey) error {
+func (e Extension) Pack(pk *ecdsa.PrivateKey) error {
 	if e.isEmpty() {
 		return ErrPathNotFound
 	}

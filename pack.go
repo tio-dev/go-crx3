@@ -2,9 +2,8 @@ package crx3
 
 import (
 	"bytes"
-	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/binary"
@@ -13,9 +12,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/mediabuyerbot/go-crx3/pb"
+	"github.com/tio-dev/go-crx3/pb"
 
-	proto "github.com/golang/protobuf/proto"
+	proto "google.golang.org/protobuf/proto"
 )
 
 const (
@@ -25,7 +24,7 @@ const (
 )
 
 // Pack packs a zip file or unzipped directory into a crx extension.
-func Pack(src string, dst string, pk *rsa.PrivateKey) (err error) {
+func Pack(src string, dst string, pk *ecdsa.PrivateKey) (err error) {
 	var (
 		publicKey      []byte
 		signedData     []byte
@@ -139,7 +138,7 @@ func makeCRXID(publicKey []byte) []byte {
 	return hash.Sum(nil)[0:16]
 }
 
-func makePublicKey(pk *rsa.PrivateKey) ([]byte, error) {
+func makePublicKey(pk *ecdsa.PrivateKey) ([]byte, error) {
 	return x509.MarshalPKIXPublicKey(&pk.PublicKey)
 }
 
@@ -150,9 +149,9 @@ func makeSignedData(publicKey []byte) ([]byte, error) {
 	return proto.Marshal(signedData)
 }
 
-func makeSign(r io.Reader, signedData []byte, pk *rsa.PrivateKey) ([]byte, error) {
+func makeSign(r io.Reader, signedData []byte, pk *ecdsa.PrivateKey) ([]byte, error) {
 	sign := sha256.New()
-	sign.Write([]byte("CRX3 SignedData\x00"))
+	sign.Write([]byte(CRX3_SIGNED_DATA))
 	if err := binary.Write(sign, binary.LittleEndian, uint32(len(signedData))); err != nil {
 		return nil, err
 	}
@@ -160,13 +159,13 @@ func makeSign(r io.Reader, signedData []byte, pk *rsa.PrivateKey) ([]byte, error
 	if _, err := io.Copy(sign, r); err != nil {
 		return nil, err
 	}
-	return rsa.SignPKCS1v15(rand.Reader, pk, crypto.SHA256, sign.Sum(nil))
+	return ecdsa.SignASN1(rand.Reader, pk, sign.Sum(nil))
 }
 
 func makeHeader(pubKey, signature, signedData []byte) ([]byte, error) {
 	header := &pb.CrxFileHeader{
-		Sha256WithRsa: []*pb.AsymmetricKeyProof{
-			&pb.AsymmetricKeyProof{
+		Sha256WithEcdsa: []*pb.AsymmetricKeyProof{
+			{
 				PublicKey: pubKey,
 				Signature: signature,
 			},
@@ -176,7 +175,7 @@ func makeHeader(pubKey, signature, signedData []byte) ([]byte, error) {
 	return proto.Marshal(header)
 }
 
-func saveDefaultPrivateKey(filename string, pk *rsa.PrivateKey) error {
+func saveDefaultPrivateKey(filename string, pk *ecdsa.PrivateKey) error {
 	pemFilename := strings.TrimRight(filename, zipExt)
 	pemFilename = pemFilename + pemExt
 	return SavePrivateKey(pemFilename, pk)

@@ -1,5 +1,7 @@
 .PHONY: deps test mocks cover sync-coveralls proto
 
+include .env
+
 deps:
 	go mod download
 

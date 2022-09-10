@@ -5,6 +5,7 @@
 syntax = "proto2";
 
 option optimize_for = LITE_RUNTIME;
+option go_package = "./pb";
 
 package pb;
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/mediabuyerbot/go-crx3/pb"
+	"github.com/tio-dev/go-crx3/pb"
 
 	"github.com/golang/protobuf/proto"
 )

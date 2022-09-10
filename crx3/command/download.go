@@ -6,8 +6,8 @@ import (
 	"path"
 	"strings"
 
-	crx3 "github.com/mediabuyerbot/go-crx3"
 	"github.com/spf13/cobra"
+	crx3 "github.com/tio-dev/go-crx3"
 )
 
 type downloadOpts struct {
@@ -51,7 +51,7 @@ func newDownloadCmd() *cobra.Command {
 				return err
 			}
 			if opts.Unpack {
-				if err := crx3.Unpack(opts.Outfile); err != nil {
+				if err := crx3.Unpack(opts.Outfile, nil, nil); err != nil {
 					return err
 				}
 				if err := os.Remove(opts.Outfile); err != nil {
